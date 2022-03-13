@@ -1,12 +1,20 @@
 TITLE String Primitives and Macros   (stonjeff_proj6.asm)
 
 ; Author: Jeff "Gent" Stone
-; Last Modified: 3/9/2022
+; Last Modified: 3/12/2022
 ; OSU email address: stonjeff@oregonstate.edu
 ; Course number/section:   CS271 Section 400
-; Project Number: 6            Due Date: 3/13/2022
-; Description: This file is provided as a template from which you may work
-;              when developing assembly projects in CS271.
+; Project Number: 6        Due Date: 3/13/2022
+; Description: This program implements two macros for string processing. The first macro
+;	displays messages and characters to the console as strings, using the Irvine Library
+;	WriteString procedure. The second macro uses ReadString to take user-input numeral 
+;	characters as strings. The user is prompted to enter 10 integers that will fit into a 32-bit
+;	register. Procedures (ReadVal and WriteVal) have been implemented to  cast the numeric
+;	strings to integers. As the integers are cast, they are stored in an array, the sum of
+;	the integers and the average (floor) are determined. 
+;	Finally, the integers are cast back to strings and all ten integers are displayed to 
+;	the console, along with the determined sum and average.
+;	**EC1 - Line numbers and a running subtoral are displayed for all valid entries.
 
 INCLUDE Irvine32.inc
 
@@ -20,7 +28,7 @@ INCLUDE Irvine32.inc
 ; ------------------------------------------------------------------------------------
 mDisplayString	MACRO	stringAddr:REQ
   push	edx
-  mov	edx,	stringAddr
+  mov	edx,	stringAddr		; Address of string to be displayed moved to edx
   call	WriteString
   pop	edx
 ENDM
@@ -37,7 +45,7 @@ ENDM
 ; Receives:	promptAddr, bufferAddr, BUFF_SIZE, where:
 ;			promptAddr	= address of prompt message (input, reference)
 ;			bufferAddr	= address of entered string/buffer (output, reference)
-;			BUFF_SIZE	= max length (20 bytes) of string (input, value)
+;			BUFF_SIZE	= max length (23 bytes) of string (input, value)
 ; Returns:	EDX = buffer address of user string
 ;			EAX = number of characters entered which is moved to byteCount
 ;			byteCount	= number of characters in bytes (output, reference)
@@ -49,9 +57,9 @@ mGetString	MACRO	promptAddr:REQ, bufferAddr:REQ, byteCount:REQ
   mDisplayString	promptAddr
 
   mov	edx,		bufferAddr	; point to the buffer
-  mov	ecx,		BUFF_SIZE	; specify max character allowed in string
-  call	ReadString
-  mov	byteCount,	eax			; number of characters entered moved FROM EAX to byteCount
+  mov	ecx,		BUFF_SIZE	; specify max characters allowed in string
+  call	ReadString				
+  mov	byteCount,	eax			; number of characters entered by user moved FROM EAX to byteCount
   pop	edx
   pop	ecx
   pop	eax
@@ -60,8 +68,8 @@ ENDM
 .const								
 
 ; CONSTANTS
-INT_COUNT	equ 10
-BUFF_SIZE	equ	23	
+INT_COUNT	equ 10				; Length of integer array
+BUFF_SIZE	equ	23				; Length of string buffer (1 (+/-) + 11 (32-bit size values) + 11 for padding)
 
 .data
 
@@ -70,40 +78,26 @@ BUFF_SIZE	equ	23
   intInstruct	BYTE	"This program will ask you to enter 10 signed integers.", 13, 10
 				BYTE	"Each of the integers and their sum must fit within a 32-bit register.", 13, 10
 				BYTE	"You can only enter 0, + or - in front of the integers.", 13, 10
-				BYTE	"The program will display the 10 integers, their sum and truncated average.", 13, 10
-				BYTE	"**EC1: Each line of valid input will display the line number and current subtotal.", 13, 10
-				BYTE	"**EC2: You will also be asked to enter 10 decimal (floating point) integers,", 13, 10
-				BYTE	"which will be displayed, along with their sum and average.", 13, 10, 10
-				BYTE	"You will now enter the first 10 integers!", 13, 10, 10, 0
-  fltInstruct	BYTE	"You will now enter 10 decimal (floating point) integers.", 13, 10, 10, 0
-				BYTE	"Each of the decimal integers and their sum fit within a 32-bit register.", 13, 10
-				BYTE	"You can only enter 0, + or - in front of the integers and a decimal . as a radix.", 13, 10, 10, 0
+				BYTE	"The program will then display the 10 integers, their sum and truncated average.", 13, 10
+				BYTE	"**EC1: Each line of valid input will display the line number and current subtotal.", 13, 10, 10, 0
   intPromptMsg	BYTE	"Enter an integer: ", 0
-  decPromptMsg	BYTE	"Enter a decimal integer: ", 0
   errorMsg		BYTE	"ERROR: Invalid input. Please try again!", 13, 10, 0
   subtotalMsg	BYTE	"The current subtotal is: ", 0
   enteredMsg	BYTE	"You entered the following integers:", 13, 10, 0
   sumMsg		BYTE	"The sum of these integers is: ", 0
   truncAvgMsg	BYTE	"The truncated average of these integers is: ", 0
-  avgMsg		BYTE	"The average of these decimal integers is: ", 0
   byeMsg		BYTE	"Thanks for using this program. Goodbye!", 13, 10, 10, 0
   spacer		BYTE	", ", 0
   period		BYTE	". ", 0
 
 ; VARIABLES
   intArray		SDWORD	INT_COUNT	DUP(?)	; List to hold the user-entered integers
-  decIntArray	REAL4	INT_COUNT	DUP(?)	; List to hold the user-entered decimal integers
-  intCountArray	DWORD	INT_COUNT	DUP(?)	; List to hold the 
   intSum		SDWORD	?					; Sum of integers
   intAvg		SDWORD	?					; Average of integers
   lineNum		DWORD	?					; Tracks current line number
-  decIntSum		REAL4	?					; Sum of decimal integers
-  decIntAvg		REAL4	?					; Average of decimal integers
-  intCount		DWORD	INT_COUNT			; Ued with FILD to convert int to float
   index			DWORD	0					; Used to increment index in intArray
-  blank			DWORD	0					; User to NOT increment lineNum, intSum and intAvg
-  stringCount	DWORD	?					; Tracks number of user-entered characters after 
-											; ReadString called to set counter in char loop
+  blank			DWORD	0					; Used to NOT increment lineNum, intSum and intAvg
+  stringCount	DWORD	?					; Tracks number of user-entered characters (string length)
 
 .code
 main PROC
@@ -164,9 +158,9 @@ _BuildArray:								; Display line number by moving to ebx &
   mDisplayString	OFFSET		enteredMsg	; Display integers entered message
   mov	ecx,		LENGTHOF	intArray	; Set counter
   mov	esi,		OFFSET		intArray
+  mov	index,		0
 
 _DisplayArray:
-  mov	index,		0
   push	index
   push	OFFSET		intArray				; [ebp + 8] push reference to address of intArray
   call	WriteVal
@@ -206,22 +200,6 @@ _NoSpacer:
   call	WriteVal							; Call WriteVal to display average
   call	CrLf
   call	CrLf
-
-
-;---------------------------------------------------------------
-; ReadFloatVal
-;---------------------------------------------------------------
-  mDisplayString	OFFSET	fltInstruct
-
-;---------------------------------------------------------------
-; WriteFloatVal
-;---------------------------------------------------------------
-
-
-;---------------------------------------------------------------
-; Entered decimal integers sum & average
-;---------------------------------------------------------------
-
 
 ;---------------------------------------------------------------
 ; Goodbye - invoke mDisplayString and pass byeMsg parameter
@@ -349,10 +327,10 @@ WriteVal	PROC
   push	edi
 
   mov	esi,	[ebp + 8]					; Move address of lineNum, intArray, intSum or intAvg to esi
- ; mov	eax,	[ebp + 12]					; Move value in index (or blank for non-array values) to eax
- ; mov	ebx,	4
- ; mul	ebx
- ; add	esi,	eax							; increment index of array 
+  mov	eax,	[ebp + 12]					; Move value in index (or blank for non-array values) to eax
+  mov	ebx,	4
+  mul	ebx
+  add	esi,	eax							; increment index of array 
   mov	eax,	[esi]						; Move the value at current index of intArray (or value of lineNum, intSum or intAvg) to eax
   mov	num,	eax
   mov	sign,	1							; Initialize sign to 1 (+)
@@ -400,22 +378,5 @@ _DisplayString:
   pop	eax
   ret 8
 WriteVal	ENDP
-; ------------------------------------------------------------------------------------
-; Name: ReadFloatVal procedure
-; Description: 
-; Preconditions: 
-; Postconditions: 
-; Receives: 
-; Returns:  
-; ------------------------------------------------------------------------------------
-
-; ------------------------------------------------------------------------------------
-; Name: WriteFloatVal procedure
-; Description: 
-; Preconditions: 
-; Postconditions: 
-; Receives: 
-; Returns:  
-; ------------------------------------------------------------------------------------
 
 END main
